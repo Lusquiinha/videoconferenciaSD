@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 import socket
 from collections import deque
+import sounddevice as sd
 
 class MediaChatNode:
     def __init__(self, my_port):
@@ -14,7 +15,6 @@ class MediaChatNode:
         self.peers = set()
         self.running = True
 
-        # Configurações de mídia
         self.video_capture = cv2.VideoCapture(0)
         if not self.video_capture.isOpened():
             print("[ERRO] Câmera não foi acessada corretamente.")
@@ -38,16 +38,24 @@ class MediaChatNode:
 
         self.video_sub = self.context.socket(zmq.PULL)
 
+        self.audio_pub = self.context.socket(zmq.PUSH)
+        self.audio_pub.bind(f"tcp://*:{my_port + 3}")
+
+        self.audio_sub = self.context.socket(zmq.PULL)
+
         self.control_socket = self.context.socket(zmq.REP)
         self.control_socket.bind(f"tcp://*:{my_port + 2}")
 
         self.video_buffer = deque(maxlen=10)
+        self.audio_buffer = deque(maxlen=10)
 
         self.threads = [
             threading.Thread(target=self.receive_text),
             threading.Thread(target=self.receive_video),
+            threading.Thread(target=self.receive_audio),
             threading.Thread(target=self.handle_control),
             threading.Thread(target=self.capture_video),
+            threading.Thread(target=self.capture_audio),
             threading.Thread(target=self.display_media)
         ]
 
@@ -60,8 +68,8 @@ class MediaChatNode:
             try:
                 self.text_sub.connect(f"tcp://{peer_ip}:{peer_port}")
                 self.video_sub.connect(f"tcp://{peer_ip}:{peer_port + 1}")
+                self.audio_sub.connect(f"tcp://{peer_ip}:{peer_port + 3}")
 
-                # Obtém IP local correto
                 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 s.connect(("8.8.8.8", 80))
                 my_ip = s.getsockname()[0]
@@ -97,10 +105,7 @@ class MediaChatNode:
                         _, port, sender_ip = msg.split()
                         port = int(port)
                         print(f"Conectando automaticamente de volta a {sender_ip}:{port}...")
-
-                        # Conecta em thread separada para evitar deadlock
                         threading.Thread(target=self.add_peer, args=(sender_ip, port), daemon=True).start()
-
                         self.control_socket.send_string("OK")
             except zmq.ZMQError as e:
                 if self.running:
@@ -119,6 +124,36 @@ class MediaChatNode:
                         self.video_pub.send(buffer.tobytes(), zmq.NOBLOCK)
                     except zmq.ZMQError:
                         continue
+
+    def capture_audio(self):
+        def callback(indata, frames, time_info, status):
+            if status:
+                print(f"[AUDIO STATUS] {status}")
+            try:
+                self.audio_pub.send(indata.tobytes(), zmq.NOBLOCK)
+            except zmq.ZMQError:
+                pass
+
+        with sd.InputStream(samplerate=44100, channels=1, dtype='int16',
+                            callback=callback, blocksize=1024, latency='low'):
+            while self.running:
+                pass
+
+    def receive_audio(self):
+        def callback(outdata, frames, time_info, status):
+            if self.audio_buffer:
+                outdata[:] = self.audio_buffer.popleft()
+            else:
+                outdata.fill(0)
+
+        with sd.OutputStream(samplerate=44100, channels=1, dtype='int16',
+                             callback=callback, blocksize=1024, latency='low'):
+            while self.running:
+                try:
+                    audio_data = self.audio_sub.recv(zmq.NOBLOCK)
+                    self.audio_buffer.append(np.frombuffer(audio_data, dtype='int16').reshape(-1, 1))
+                except zmq.Again:
+                    time.sleep(0.005)
 
     def receive_text(self):
         while self.running:
@@ -162,8 +197,11 @@ class MediaChatNode:
         self.text_sub.close()
         self.video_pub.close()
         self.video_sub.close()
+        self.audio_pub.close()
+        self.audio_sub.close()
         self.control_socket.close()
         self.context.term()
+
 
 def parse_connect_command(cmd):
     match = re.match(r'^/connect\s+(\S+)\s+(\d+)$', cmd)
