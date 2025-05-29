@@ -2,87 +2,92 @@
 
 ## Descrição
 
-Este projeto implementa um sistema de videoconferência **peer-to-peer (P2P)** com **comunicação em tempo real por texto, vídeo e áudio**, utilizando **ZeroMQ**, **OpenCV** e **SoundDevice**. Foi desenvolvido como parte da disciplina **Sistemas Distribuídos**.
+Este projeto implementa um sistema de videoconferência distribuído utilizando a arquitetura peer-to-peer (P2P). Desenvolvido como parte da disciplina **Sistemas Distribuídos**, o sistema permite comunicação em tempo real com troca de mensagens de texto, vídeo e áudio entre múltiplos nós na rede.
 
 ## Funcionalidades
 
-- Envio e recebimento de mensagens de texto entre múltiplos nós
-- Transmissão de vídeo em tempo real via webcam
-- Transmissão de áudio em tempo real com reprodução nos peers
-- Conexão dinâmica e mútua entre nós, sem servidor central
+- Comunicação por texto em tempo real
+- Transmissão de vídeo ponto a ponto
+- Transmissão de áudio ponto a ponto
+- Conexão automática bilateral entre nós sem servidor centralizado
+- Suporte a múltiplos peers simultâneos
 
 ## Tecnologias Utilizadas
 
-- Python 3
-- ZeroMQ – Comunicação entre processos
-- OpenCV – Captura e exibição de vídeo
-- SoundDevice – Captura e reprodução de áudio
-- Threading – Execução concorrente das tarefas
-- NumPy – Processamento de sinais
+- **Python**: Linguagem principal do projeto
+- **ZeroMQ (pyzmq)**: Biblioteca para comunicação assíncrona
+- **OpenCV**: Captura e exibição de vídeo
+- **SoundDevice**: Captura e reprodução de áudio
+- **Threading**: Execução concorrente
 
-## Requisitos
+## Clonando o Repositório
 
-Crie um ambiente virtual e instale as dependências:
+Clone este repositório em sua máquina local com o comando:
+
+```bash
+git clone https://github.com/Lusquiinha/videoconferenciaSD.git
+cd videoconferenciaSD
+```
+
+## Como Executar
+
+1. **Crie um ambiente virtual (opcional, mas recomendado)**
 
 ```bash
 python -m venv venv
 source venv/bin/activate     # Linux/macOS
 venv\Scripts\activate.bat  # Windows
+```
 
+2. **Instale as dependências**
+
+```bash
 pip install -r requirements.txt
 ```
 
-**Arquivo `requirements.txt`:**
+3. **Execute o programa em dois terminais diferentes, ou em duas máquinas distintas (Linux e/ou Windows):**
 
-```
-pyzmq
-opencv-python
-numpy
-sounddevice
+```bash
+python main.py <porta>
 ```
 
-## Como Executar
+> Exemplo:
+>
+> Em um terminal (usuário 1):
+> ```bash
+> python main.py 5000
+> ```
+>
+> Em outro terminal (usuário 2):
+> ```bash
+> python main.py 5001
+> ```
 
-1. No terminal de cada máquina (ou em duas abas diferentes para testes locais), execute:
+4. **Conecte os peers**
 
-    python main.py <porta>
+No terminal do primeiro usuário, digite:
 
-    Exemplo:
+```bash
+/connect <ip_do_segundo_usuario> <porta>
+```
 
-    python main.py 5000
+Exemplo:
 
-2. No terminal interativo do programa, use os comandos disponíveis:
+```bash
+/connect 192.168.1.100 5001
+```
 
-    - Para conectar a outro peer:
+O outro nó será automaticamente conectado de volta.
 
-        /connect <ip> <porta>
+## Comandos Disponíveis
 
-    - Para listar os peers conectados:
+- `/connect <ip> <porta>`: Conectar a outro peer
+- `/peers`: Listar peers conectados
+- Digite qualquer texto e pressione Enter para enviar uma mensagem
 
-        /peers
+## Requisitos
 
-    - Para enviar mensagem de texto:
+- Python 3.8 ou superior
+- Webcam e microfone funcionando
+- Sistema operacional compatível com ZeroMQ e sounddevice
 
-        Basta digitar e pressionar Enter.
-
-**Nota:** Ao conectar a outro peer, o sistema estabelece automaticamente uma conexão recíproca (ex: peer A conecta a B → B conecta de volta a A).
-
-## Teste Local (em uma só máquina)
-
-Abra dois terminais:
-
-    # Terminal 1
-    python main.py 5000
-
-    # Terminal 2
-    python main.py 5001
-
-No terminal 2:
-
-    /connect 127.0.0.1 5000
-
-## Observações
-
-- O sistema foi testado em Linux e Windows.
-- Para melhor qualidade de áudio, recomenda-se usar fones de ouvido com microfone.
-- O áudio pode apresentar artefatos se o buffer estiver sobrecarregado. Isso será ajustado em versões futuras.
