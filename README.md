@@ -1,5 +1,11 @@
 # VideoConferência SD
 
+## Membros
+
+ - Gabriel Andreazi Bertho, 790780
+ - Lucas de Oliveira Rodrigues Alves, 811943
+ - Jonas Gabriel dos Santos Costa Fagundes, 790901
+
 ## Descrição
 
 Este projeto implementa um sistema de videoconferência distribuído utilizando a arquitetura peer-to-peer (P2P). Desenvolvido como parte da disciplina **Sistemas Distribuídos**, o sistema permite comunicação em tempo real com troca de mensagens de texto, vídeo e áudio entre múltiplos nós na rede.
