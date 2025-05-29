@@ -127,7 +127,7 @@ class MediaChatNode:
 
     def capture_audio(self):
         def callback(indata, frames, time_info, status):
-            if status:
+            if status and str(status) != 'input overflow':
                 print(f"[AUDIO STATUS] {status}")
             try:
                 self.audio_pub.send(indata.tobytes(), zmq.NOBLOCK)
